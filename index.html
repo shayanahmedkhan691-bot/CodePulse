@@ -14,7 +14,7 @@
     textarea { width:100%; height:260px; font-family: monospace; font-size:14px; padding:10px; border-radius:6px; border:1px solid #dfe6f3; resize:vertical; }
     select, button { padding:8px 12px; border-radius:6px; border:1px solid #cbd7ff; background:#0b5cff; color:white; cursor:pointer; font-weight:600; }
     button.secondary { background:#2f3542; border-color:#2f3542; }
-    pre.output { background:#0d1117; color:#d3d7df; padding:12px; height:160px; overflow:auto; border-radius:6px; }
+    pre.output { background:#0d1117; color:#d3d7df; padding:12px; height:160px; overflow:auto; border-radius:6px; white-space:pre-wrap; }
     .small { font-size:13px; color:#4b5563; }
     footer { text-align:center; padding:18px; color:#666; }
     @media (max-width:620px){ .row { flex-direction:column } }
@@ -32,7 +32,7 @@
         <label for="language">Choose language</label>
         <select id="language" onchange="onLangChange()">
           <option value="python">Python (runs in browser)</option>
-          <option value="cpp">C++ (open on Replit)</option>
+          <option value="cpp">C++ (runs via Wandbox API)</option>
         </select>
       </div>
       <div style="display:flex; gap:8px; align-items:end;">
@@ -50,7 +50,7 @@ print("Hello, CodePulse!")
 name = input("What's your name? ")
 print("Nice to meet you,", name)
         </textarea>
-        <div class="small" style="margin-top:8px">Tip: For C++ press the "Open C++ in Replit" button after switching to C++.</div>
+        <div class="small" style="margin-top:8px">Tip: C++ runs on Wandbox servers; the result will appear in the Output box below.</div>
       </div>
 
       <div class="panel" style="flex: 0 0 360px;">
@@ -58,14 +58,14 @@ print("Nice to meet you,", name)
         <pre id="output" class="output">(Program output appears here)</pre>
         <div style="margin-top:10px; display:flex; gap:8px;">
           <button onclick="clearOutput()" class="secondary">Clear</button>
-          <button onclick="openCpp()" id="openCppBtn" style="display:none">Open C++ in Replit</button>
+          <button onclick="openCppDocs()" id="openCppDocsBtn" class="secondary">C++ Help</button>
         </div>
       </div>
     </div>
 
     <section style="margin-top:18px" class="panel">
       <h3>About this demo</h3>
-      <p class="small">Python runs in your browser using Skulpt (no server). C++ cannot run fully in this page, so use Replit (free online IDE). This keeps CodePulse safe and simple for beginners.</p>
+      <p class="small">Python runs in your browser using Skulpt (no server). C++ code is sent to Wandbox (a remote compilation service) and the output is shown here so students don't have to leave the page.</p>
     </section>
   </div>
 
@@ -82,12 +82,9 @@ print("Nice to meet you,", name)
     function onLangChange() {
       const lang = document.getElementById('language').value;
       document.getElementById('runBtn').disabled = false;
-      document.getElementById('openCppBtn').style.display = (lang === 'cpp') ? 'inline-block' : 'none';
       if (lang === 'cpp') {
-        // set a friendly C++ template
         document.getElementById('code').value = `#include <bits/stdc++.h>\nusing namespace std;\nint main(){\n  cout << "Hello, CodePulse from C++!\\n";\n  return 0;\n}\n`;
       } else {
-        // switch back to a simple python template
         document.getElementById('code').value = `print("Hello, CodePulse!")\nname = input("What's your name? ")\nprint("Hi,", name)\n`;
       }
     }
@@ -116,10 +113,8 @@ print("Nice to meet you,", name)
       document.getElementById('output').textContent = '(Program output appears here)';
     }
 
-    // Open Replit for C++ (user can run code there)
-    function openCpp() {
-      // This opens the general C++ Replit page; you can change to a specific Repl link later.
-      window.open('https://replit.com/languages/cpp', '_blank');
+    function openCppDocs() {
+      window.open('https://cplusplus.com/', '_blank');
     }
 
     // Run Python using Skulpt
@@ -135,14 +130,7 @@ print("Nice to meet you,", name)
       return Sk.builtinFiles['files'][x];
     }
 
-    async function run() {
-      const lang = document.getElementById('language').value;
-      if (lang === 'cpp') {
-        // For C++ we open Replit — running C++ in-browser is complex
-        openCpp();
-        return;
-      }
-      const prog = document.getElementById('code').value;
+    async function runPython(prog) {
       document.getElementById('output').textContent = 'Running...';
       Sk.pre = "output";
       Sk.configure({output:outf, read: builtinRead});
@@ -153,15 +141,61 @@ print("Nice to meet you,", name)
       }
     }
 
+    // Run C++ using Wandbox API (no API key required for public endpoint)
+    async function runCpp(code) {
+      const out = document.getElementById('output');
+      out.textContent = 'Sending code to compiler...';
+
+      const payload = {
+        code: code,
+        // compiler choice: using gcc-head which supports C++ when -std is provided
+        compiler: 'gcc-head',
+        // ensure C++17 standard
+        'compiler-option-raw': '-std=c++17',
+        stdin: ''
+      };
+
+      try {
+        const resp = await fetch('https://wandbox.org/api/compile.json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+          out.textContent = 'Compilation server error: ' + resp.status + ' ' + resp.statusText;
+          return;
+        }
+        const data = await resp.json();
+        // concat compiler messages and program output
+        let result = '';
+        if (data.compiler_output && data.compiler_output.length) result += 'Compiler output:\n' + data.compiler_output + '\n';
+        if (data.compiler_error && data.compiler_error.length) result += 'Compiler errors:\n' + data.compiler_error + '\n';
+        if (data.program_output && data.program_output.length) result += 'Program output:\n' + data.program_output + '\n';
+        if (result === '') result = '(No output)';
+        out.textContent = result;
+      } catch (err) {
+        out.textContent = 'Error calling compile API: ' + err;
+      }
+    }
+
+    async function run() {
+      const lang = document.getElementById('language').value;
+      const prog = document.getElementById('code').value;
+      if (lang === 'cpp') {
+        await runCpp(prog);
+        return;
+      }
+      await runPython(prog);
+    }
+
     // On first load, try to load saved Python code
     window.addEventListener('load', () => {
-      const saved = localStorage.getItem('codepulse_python');
-      if (saved) document.getElementById('code').value = saved;
+      const savedPy = localStorage.getItem('codepulse_python');
+      if (savedPy) document.getElementById('code').value = savedPy;
       onLangChange(); // initialize UI
     });
   </script>
 
-  <!-- rebuilt: 2025-12-27 by Copilot -->
-  <!-- rebuilt: 2025-12-27 13:57:07 UTC by shayanahmedkhan691-bot -->
+  <!-- rebuilt: 2025-12-27 by Copilot; added Wandbox C++ runner -->
 </body>
 </html>
