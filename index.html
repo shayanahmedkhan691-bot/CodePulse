@@ -1,23 +1,164 @@
- <!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CodePulse | Founder Profile</title>
-    <style>
-        body { background-color: #0f172a; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 40px; }
-        .card { background: #1e293b; padding: 30px; border-radius: 15px; border: 1px solid #38bdf8; max-width: 600px; text-align: center; box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
-        h1 { color: #38bdf8; font-size: 2.5rem; margin-bottom: 10px; }
-        p { line-height: 1.6; color: #94a3b8; }
-        .highlight { color: #4ade80; font-weight: bold; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CodePulse — Learn & Run Python and C++</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f7fb; color:#111; }
+    header { background:#0b5cff; color:white; padding:16px; text-align:center; }
+    .container { max-width:1000px; margin:20px auto; padding:16px; }
+    .row { display:flex; gap:16px; flex-wrap:wrap; }
+    .panel { background:white; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.08); padding:12px; flex:1 1 480px; }
+    label { display:block; margin-bottom:6px; font-weight:600; }
+    textarea { width:100%; height:260px; font-family: monospace; font-size:14px; padding:10px; border-radius:6px; border:1px solid #dfe6f3; resize:vertical; }
+    select, button { padding:8px 12px; border-radius:6px; border:1px solid #cbd7ff; background:#0b5cff; color:white; cursor:pointer; font-weight:600; }
+    button.secondary { background:#2f3542; border-color:#2f3542; }
+    pre.output { background:#0d1117; color:#d3d7df; padding:12px; height:160px; overflow:auto; border-radius:6px; }
+    .small { font-size:13px; color:#4b5563; }
+    footer { text-align:center; padding:18px; color:#666; }
+    @media (max-width:620px){ .row { flex-direction:column } }
+  </style>
 </head>
 <body>
-    <div class="card">
-        <h1>CodePulse</h1>
-        <h2>Founder: Shayan Ahmed Khan</h2>
-        <p>Exploring the intersection of <span class="highlight">Computer Science</span> and <span class="highlight">Software Engineering</span>.</p>
-        <p>Status: System Online & Building for the Future.</p>
+  <header>
+    <h1 style="margin:0">CodePulse</h1>
+    <div class="small">Learn and run Python and C++ — simple & safe for beginners</div>
+  </header>
+
+  <div class="container">
+    <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px;">
+      <div>
+        <label for="language">Choose language</label>
+        <select id="language" onchange="onLangChange()">
+          <option value="python">Python (runs in browser)</option>
+          <option value="cpp">C++ (open on Replit)</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:8px; align-items:end;">
+        <button onclick="run()" id="runBtn">Run</button>
+        <button class="secondary" onclick="saveCode()">Save</button>
+        <button class="secondary" onclick="loadExamples()">Examples</button>
+      </div>
     </div>
+
+    <div class="row">
+      <div class="panel">
+        <label for="code">Code</label>
+        <textarea id="code">// Python example — edit this and press Run
+print("Hello, CodePulse!")
+name = input("What's your name? ")
+print("Nice to meet you,", name)
+        </textarea>
+        <div class="small" style="margin-top:8px">Tip: For C++ press the "Open C++ in Replit" button after switching to C++.</div>
+      </div>
+
+      <div class="panel" style="flex: 0 0 360px;">
+        <label>Output</label>
+        <pre id="output" class="output">(Program output appears here)</pre>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button onclick="clearOutput()" class="secondary">Clear</button>
+          <button onclick="openCpp()" id="openCppBtn" style="display:none">Open C++ in Replit</button>
+        </div>
+      </div>
+    </div>
+
+    <section style="margin-top:18px" class="panel">
+      <h3>About this demo</h3>
+      <p class="small">Python runs in your browser using Skulpt (no server). C++ cannot run fully in this page, so use Replit (free online IDE). This keeps CodePulse safe and simple for beginners.</p>
+    </section>
+  </div>
+
+  <footer>
+    Built for learners — want more lessons or features? Ask me and I’ll help add them.
+  </footer>
+
+  <!-- Skulpt (runs Python in the browser) -->
+  <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+
+  <script>
+    // Initialize UI based on language
+    function onLangChange() {
+      const lang = document.getElementById('language').value;
+      document.getElementById('runBtn').disabled = false;
+      document.getElementById('openCppBtn').style.display = (lang === 'cpp') ? 'inline-block' : 'none';
+      if (lang === 'cpp') {
+        // set a friendly C++ template
+        document.getElementById('code').value = `#include <bits/stdc++.h>\nusing namespace std;\nint main(){\n  cout << "Hello, CodePulse from C++!\\n";\n  return 0;\n}\n`;
+      } else {
+        // switch back to a simple python template
+        document.getElementById('code').value = `print("Hello, CodePulse!")\nname = input("What's your name? ")\nprint("Hi,", name)\n`;
+      }
+    }
+
+    // Save code to browser localStorage
+    function saveCode() {
+      const lang = document.getElementById('language').value;
+      const code = document.getElementById('code').value;
+      localStorage.setItem('codepulse_' + lang, code);
+      alert('Saved your code locally in your browser.');
+    }
+    // Load saved examples or earlier-saved code
+    function loadExamples() {
+      const lang = document.getElementById('language').value;
+      const saved = localStorage.getItem('codepulse_' + lang);
+      if (saved) {
+        document.getElementById('code').value = saved;
+        alert('Loaded saved code for ' + lang);
+        return;
+      }
+      alert('No saved code — loading default example.');
+      onLangChange();
+    }
+
+    function clearOutput() {
+      document.getElementById('output').textContent = '(Program output appears here)';
+    }
+
+    // Open Replit for C++ (user can run code there)
+    function openCpp() {
+      // This opens the general C++ Replit page; you can change to a specific Repl link later.
+      window.open('https://replit.com/languages/cpp', '_blank');
+    }
+
+    // Run Python using Skulpt
+    function outf(text) {
+      const out = document.getElementById('output');
+      if (out.textContent === '(Program output appears here)') out.textContent = '';
+      out.textContent += text;
+    }
+
+    function builtinRead(x) {
+      if (Sk.builtinFiles === undefined || Sk.builtinFiles['files'][x] === undefined)
+        throw "File not found: '" + x + "'";
+      return Sk.builtinFiles['files'][x];
+    }
+
+    async function run() {
+      const lang = document.getElementById('language').value;
+      if (lang === 'cpp') {
+        // For C++ we open Replit — running C++ in-browser is complex
+        openCpp();
+        return;
+      }
+      const prog = document.getElementById('code').value;
+      document.getElementById('output').textContent = 'Running...';
+      Sk.pre = "output";
+      Sk.configure({output:outf, read: builtinRead});
+      try {
+        await Sk.importMainWithBody('<stdin>', false, prog, true);
+      } catch (err) {
+        outf(err.toString() + '\n');
+      }
+    }
+
+    // On first load, try to load saved Python code
+    window.addEventListener('load', () => {
+      const saved = localStorage.getItem('codepulse_python');
+      if (saved) document.getElementById('code').value = saved;
+      onLangChange(); // initialize UI
+    });
+  </script>
 </body>
 </html>
